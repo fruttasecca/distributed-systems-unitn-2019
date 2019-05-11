@@ -214,8 +214,8 @@ class Node extends AbstractActor {
     }
 
     private void onRequestMsg(RequestMsg msg) {
-        // recovery check
-        if (this.in_recovery_mode){
+        if (this.in_failure_mode){}
+        else if (this.in_recovery_mode){
             logReceivingMsg("Request in recovery mode", msg.senderId);
             request_queue.add(new ActorInfo(getSender(), msg.senderId));
         }
@@ -228,8 +228,8 @@ class Node extends AbstractActor {
     }
 
     private void onPrivilegeMsg(PrivilegeMsg msg) {
-        // recovery check
-        if (this.in_recovery_mode){
+        if (this.in_failure_mode){}
+        else if (this.in_recovery_mode){
             logReceivingMsg("Privilege in recovery mode", msg.senderId);
             holder = new ActorInfo(getSelf(), id);
         }
@@ -356,13 +356,16 @@ class Node extends AbstractActor {
     }
 
     private void onSystemWantCSMsg(SystemWantCSMsg msg) {
-        if (this.in_recovery_mode){
+        if (this.in_failure_mode){}
+        else if (this.in_recovery_mode){
             logReceivingMsg("SystemWantCSMsg in recovery mode", -1);
-            request_queue.add(new ActorInfo(getSelf(), id));
+            if (!queueContainsSelf())
+                request_queue.add(new ActorInfo(getSelf(), id));
         }
         else {
             logReceivingMsg("SystemWantCSMsg", -1);
-            request_queue.add(new ActorInfo(getSelf(), id));
+            if (!queueContainsSelf())
+                request_queue.add(new ActorInfo(getSelf(), id));
             assignPrivilege();
             makeRequest();
         }
@@ -370,8 +373,8 @@ class Node extends AbstractActor {
 
     private void onSystemFailMsg(SystemFailMsg msg) {
         logReceivingMsg("SystemFailMsg", -1);
-        // node cannot fail in recovery node by assumption
-        if (!this.in_recovery_mode) {
+        // node cannot fail in recovery mode and while is in critical section by assumption
+        if (!in_recovery_mode && !using) {
             in_failure_mode = true;
             // send a recovery message to yourself to simulate the end of the failure in the future
             SelfStartRecoveryMsg rec_msg = new SelfStartRecoveryMsg();
@@ -450,6 +453,14 @@ class Node extends AbstractActor {
             this.reference = reference;
             this.id = id;
         }
+    }
+
+    private boolean queueContainsSelf(){
+        for(ActorInfo ai:this.request_queue){
+            if (ai.id == this.id)
+                return true;
+        }
+        return false;
     }
 
 }
