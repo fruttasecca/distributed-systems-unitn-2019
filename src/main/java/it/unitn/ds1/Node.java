@@ -11,6 +11,7 @@ import akka.actor.Props;
 import java.util.concurrent.TimeUnit;
 
 import akka.actor.dsl.Creators;
+import scala.compat.java8.converterImpl.StepsIntRange;
 import scala.concurrent.duration.FiniteDuration;
 
 class Node extends AbstractActor {
@@ -213,17 +214,31 @@ class Node extends AbstractActor {
     }
 
     private void onRequestMsg(RequestMsg msg) {
-        logReceivingMsg("Request", msg.senderId);
-        request_queue.add(new ActorInfo(getSender(), msg.senderId));
-        assignPrivilege();
-        makeRequest();
+        // recovery check
+        if (this.in_recovery_mode){
+            logReceivingMsg("Request in recovery mode", msg.senderId);
+            request_queue.add(new ActorInfo(getSender(), msg.senderId));
+        }
+        else{
+            logReceivingMsg("Request", msg.senderId);
+            request_queue.add(new ActorInfo(getSender(), msg.senderId));
+            assignPrivilege();
+            makeRequest();
+        }
     }
 
     private void onPrivilegeMsg(PrivilegeMsg msg) {
-        logReceivingMsg("Privilege", msg.senderId);
-        holder = new ActorInfo(getSelf(), id);
-        assignPrivilege();
-        makeRequest();
+        // recovery check
+        if (this.in_recovery_mode){
+            logReceivingMsg("Privilege in recovery mode", msg.senderId);
+            holder = new ActorInfo(getSelf(), id);
+        }
+        else {
+            logReceivingMsg("Privilege", msg.senderId);
+            holder = new ActorInfo(getSelf(), id);
+            assignPrivilege();
+            makeRequest();
+        }
     }
 
     private void onPrivilegeAndRequestMsg(PrivilegeAndRequestMsg msg) {
@@ -267,6 +282,7 @@ class Node extends AbstractActor {
         // holder, asked, and the request queue have been incrementally built each time we received a msg
         if (total_advise_msgs_received == neighbours.size()) {
             in_recovery_mode = false;
+            logExitRecoveryMode();
             assignPrivilege();
             makeRequest();
         }
@@ -340,19 +356,28 @@ class Node extends AbstractActor {
     }
 
     private void onSystemWantCSMsg(SystemWantCSMsg msg) {
-        logReceivingMsg("SystemWantCSMsg", -1);
-        request_queue.add(new ActorInfo(getSelf(), id));
-        assignPrivilege();
-        makeRequest();
+        if (this.in_recovery_mode){
+            logReceivingMsg("SystemWantCSMsg in recovery mode", -1);
+            request_queue.add(new ActorInfo(getSelf(), id));
+        }
+        else {
+            logReceivingMsg("SystemWantCSMsg", -1);
+            request_queue.add(new ActorInfo(getSelf(), id));
+            assignPrivilege();
+            makeRequest();
+        }
     }
 
     private void onSystemFailMsg(SystemFailMsg msg) {
         logReceivingMsg("SystemFailMsg", -1);
-        in_failure_mode = true;
-        // send a recovery message to yourself to simulate the end of the failure in the future
-        SelfStartRecoveryMsg rec_msg = new SelfStartRecoveryMsg();
-        context().system().scheduler().scheduleOnce(FAILURE_DURATION, getSelf(),
-                rec_msg, context().system().dispatcher(), null);
+        // node cannot fail in recovery node by assumption
+        if (!this.in_recovery_mode) {
+            in_failure_mode = true;
+            // send a recovery message to yourself to simulate the end of the failure in the future
+            SelfStartRecoveryMsg rec_msg = new SelfStartRecoveryMsg();
+            context().system().scheduler().scheduleOnce(FAILURE_DURATION, getSelf(),
+                    rec_msg, context().system().dispatcher(), null);
+        }
     }
 
     private void onSystemPrintHistoryMsg(SystemPrintHistoryMsg msg) {
@@ -406,6 +431,12 @@ class Node extends AbstractActor {
 
     private void logSendingMsg(final String msg_type, final int to_id) {
         String to_log = String.format("Node %02d sent %s msg to node %02d\n", this.id, msg_type, to_id);
+        history.append(to_log);
+        System.out.print(to_log);
+    }
+
+    private void logExitRecoveryMode(){
+        String to_log = String.format("Node %02d exited recovery mode", this.id);
         history.append(to_log);
         System.out.print(to_log);
     }

@@ -17,6 +17,7 @@ import it.unitn.ds1.Node.SystemInitMsg;
 import it.unitn.ds1.Node.SystemNodeNeighbourhoodMsg;
 import it.unitn.ds1.Node.SystemWantCSMsg;
 import it.unitn.ds1.Node.SystemPrintHistoryMsg;
+import it.unitn.ds1.Node.SystemFailMsg;
 
 /* TODO
 assunto che no nodo crasha durante init?
@@ -82,6 +83,14 @@ public class DistributedMutEx {
         SystemWantCSMsg wantCS = new SystemWantCSMsg();
         nodes.get(9).tell(wantCS, null);
 
+        try {
+            System.out.println(">>> ENTER to make 3 fail <<<");
+            System.in.read();
+        } catch (IOException ioe) {
+        }
+
+        SystemFailMsg fail = new SystemFailMsg();
+        nodes.get(3).tell(fail, null);
 
         // qua poi va fatto loop iterativo su input dell utente, per fare entrare nodi in cs, stoppare, etc.
         //
