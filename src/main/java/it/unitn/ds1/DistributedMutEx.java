@@ -47,16 +47,21 @@ public class DistributedMutEx {
         // begin e end è solo per provare
 
         for (int i = 0; i < N_ACTORS; i++) {
-            Integer id = i + 1;
-            if (id == N_ACTORS)
-                id = N_ACTORS - 2 ;
-            ActorRef neigh = nodes.get(id);
+            List<Integer> ids = new ArrayList<>();
+            // right neighbour
+            if (i != N_ACTORS - 1)
+                ids.add(i+1);
+            // left neghbour
+            if (i != 0)
+                ids.add(i-1);
 
             List<ActorRef> neighs = new ArrayList<>();
             List<Integer> neigh_ids = new ArrayList<>();
 
-            neighs.add(neigh);
-            neigh_ids.add(id);
+            for (Integer id:ids){
+                neighs.add(nodes.get(id));
+                neigh_ids.add(id);
+            }
 
             neighs = Collections.unmodifiableList(neighs);
             neigh_ids = Collections.unmodifiableList(neigh_ids);
