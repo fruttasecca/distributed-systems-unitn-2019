@@ -49,14 +49,32 @@ public class DistributedMutEx {
         // per ogni nodo aggiungeremo poi i suoi neighbours così, iterativamente
         // begin e end è solo per provare
 
+
         for (int i = 0; i < N_ACTORS; i++) {
             List<Integer> ids = new ArrayList<>();
             // right neighbour
-            if (i != N_ACTORS - 1)
-                ids.add(i+1);
-            // left neghbour
-            if (i != 0)
-                ids.add(i-1);
+//            if (i != N_ACTORS - 1)
+//                ids.add(i+1);
+//             left neghbour
+//            if (i != 0)
+//                ids.add(i-1);
+
+            // parent
+            if (i != 0) {
+                int p = (i - 1) / 2;
+                ids.add(p);
+            }
+            // children
+            // left child
+            int lc = i * 2 + 1;
+            if (lc < N_ACTORS){
+                ids.add(lc);
+                // right child
+                int rc = lc + 1;
+                if (rc < N_ACTORS) {
+                    ids.add(rc);
+                }
+            }
 
             List<ActorRef> neighs = new ArrayList<>();
             List<Integer> neigh_ids = new ArrayList<>();
@@ -72,6 +90,8 @@ public class DistributedMutEx {
 
             nodes.get(i).tell(neigh_msg, null);
         }
+
+
 
         SystemInitMsg init = new SystemInitMsg();
         nodes.get(0).tell(init, null);
