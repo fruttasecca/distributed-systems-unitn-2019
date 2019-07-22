@@ -3,12 +3,14 @@ package it.unitn.ds1;
 import akka.actor.ActorRef;
 import akka.actor.AbstractActor;
 
+import java.io.IOException;
 import java.util.*;
 import java.io.Serializable;
 
 import akka.actor.Props;
 
 import java.util.concurrent.TimeUnit;
+import java.io.FileWriter;
 
 import akka.actor.dsl.Creators;
 import scala.compat.java8.converterImpl.StepsIntRange;
@@ -18,6 +20,9 @@ class Node extends AbstractActor {
     private final int id;    // ID of the current actor
     private List<ActorInfo> neighbours; // neighbourhood of this node (list of pairs of (actoref, int)
     private final boolean be_greedy; // should the node be greedy in adding to the queue (add itselfs on top, always)
+
+
+
     private ActorInfo holder; // who is the holder for this node
     private boolean using; // is the node in the CS?
     private boolean asked; // has the node asked for the PRIVILEGE token to its holder?
@@ -27,11 +32,16 @@ class Node extends AbstractActor {
     private int total_advise_msgs_received; // amount of advise msgs received during this recovery
 
     // durations
-    private final FiniteDuration FAILURE_DURATION = new FiniteDuration(5, TimeUnit.SECONDS);
-    private final FiniteDuration CS_DURATION = new FiniteDuration(5, TimeUnit.SECONDS);
+    private final FiniteDuration FAILURE_DURATION = new FiniteDuration(2, TimeUnit.SECONDS);
+    private final FiniteDuration CS_DURATION = new FiniteDuration(10, TimeUnit.SECONDS);
     // logging
     private StringBuffer history;
 
+
+    public ActorInfo getHolder()
+    {
+        return holder;
+    }
 
     /* -- Actor constructor --------------------------------------------------- */
     public Node(final int id, final boolean be_greedy) {
@@ -189,6 +199,11 @@ class Node extends AbstractActor {
 
     // we will use this to ask a node to print its history
     public static class SystemPrintHistoryMsg implements Serializable {
+        public final String filename;
+
+        public SystemPrintHistoryMsg(final String filename) {
+            this.filename = filename;
+        }
     }
 
     /*
@@ -218,10 +233,12 @@ class Node extends AbstractActor {
         else if (this.in_recovery_mode){
             logReceivingMsg("Request in recovery mode", msg.senderId);
             request_queue.add(new ActorInfo(getSender(), msg.senderId));
+            logQueueUpdate(msg.senderId);
         }
         else{
             logReceivingMsg("Request", msg.senderId);
             request_queue.add(new ActorInfo(getSender(), msg.senderId));
+            logQueueUpdate(msg.senderId);
             assignPrivilege();
             makeRequest();
         }
@@ -245,6 +262,7 @@ class Node extends AbstractActor {
         logReceivingMsg("PrivilegeAndRequest", msg.senderId);
         holder = new ActorInfo(getSelf(), id);
         request_queue.add(new ActorInfo(getSender(), msg.senderId));
+        logQueueUpdate(msg.senderId);
         assignPrivilege();
         makeRequest();
     }
@@ -266,6 +284,7 @@ class Node extends AbstractActor {
         if (msg.asked && msg.you_are_my_holder) {
             // if the other node asked us for the PRIVILEGE we enqueue it
             request_queue.add(new ActorInfo(getSender(), msg.senderId));
+            logQueueUpdate(msg.senderId);
         } else if (!msg.you_are_my_holder) {
             /*
             if the receiving node is not the holder of the sender, then the sender is the holder
@@ -293,7 +312,7 @@ class Node extends AbstractActor {
 
     private void onSelfExitCSMsg(SelfExitCSMsg msg) {
         logReceivingMsg("ExitCS", id);
-        String to_log = String.format("Node %02d exited CS", this.id);
+        String to_log = String.format("Node %02d exited CS\n", this.id);
         history.append(to_log);
         System.out.print(to_log);
 
@@ -361,11 +380,13 @@ class Node extends AbstractActor {
             logReceivingMsg("SystemWantCSMsg in recovery mode", -1);
             if (!queueContainsSelf())
                 request_queue.add(new ActorInfo(getSelf(), id));
+                logQueueUpdate(id);
         }
         else {
             logReceivingMsg("SystemWantCSMsg", -1);
             if (!queueContainsSelf())
                 request_queue.add(new ActorInfo(getSelf(), id));
+                logQueueUpdate(id);
             assignPrivilege();
             makeRequest();
         }
@@ -384,7 +405,16 @@ class Node extends AbstractActor {
     }
 
     private void onSystemPrintHistoryMsg(SystemPrintHistoryMsg msg) {
-        System.out.printf("%02d: %s\n", this.id, history);
+//        System.out.printf("%02d: %s\n", this.id, history);
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(msg.filename, true);
+            fileWriter.write(history.toString());
+            fileWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /*
@@ -414,7 +444,7 @@ class Node extends AbstractActor {
                 context().system().scheduler().scheduleOnce(CS_DURATION, getSelf(),
                         new SelfExitCSMsg(), context().system().dispatcher(), null);
 
-                String to_log = String.format("Node %02d entered CS", this.id);
+                String to_log = String.format("Node %02d entered CS\n", this.id);
                 history.append(to_log);
                 System.out.print(to_log);
             } else {
@@ -439,9 +469,22 @@ class Node extends AbstractActor {
     }
 
     private void logExitRecoveryMode(){
-        String to_log = String.format("Node %02d exited recovery mode", this.id);
+        String to_log = String.format("Node %02d exited recovery mode\n", this.id);
         history.append(to_log);
         System.out.print(to_log);
+    }
+
+    private void logQueueUpdate(int lastNode){
+        ArrayList<Integer> nodes = new ArrayList<>();
+        for (ActorInfo node : this.request_queue){
+            nodes.add(node.id);
+        }
+
+        String to_log = String.format("Node %02d added node %02d to its queue\n" +
+                "Queue content of node %02d: %s\n", this.id, lastNode, this.id, nodes.toString());
+        history.append(to_log);
+        System.out.print(to_log);
+
     }
 
     // utility classes
