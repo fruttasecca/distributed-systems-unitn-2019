@@ -3,6 +3,7 @@ package it.unitn.ds1;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class DistributedMutExMain {
 
@@ -31,33 +32,40 @@ public class DistributedMutExMain {
 
             } catch (IOException ioe) {
             }
-            if (user_in.length()>0) {
-                action = user_in.substring(0, 1);
 
-                if (!action.equals("e"))
-                    action_node = Integer.parseInt(user_in.substring(1, user_in.length()));
-            }
-            else
-                valid_in = false;
+            StringTokenizer st = new StringTokenizer(user_in);
+            while (st.hasMoreElements()) {
 
-            if ((!(action.equals("c")) && !(action.equals("f")) && !(action.equals("e"))) || (action_node < 0 || action_node >= mutEx_run.getnActors() ))
-                valid_in = false;
+                String next_cmd = st.nextElement().toString();
 
-            if (!valid_in)
-                System.out.println(">>> Not valid action code <<<");
-            else {
-                switch (action){
-                    case "e":
-                        exit = true;
-                        break;
-                    case "c":
-                        mutEx_run.request_cs(action_node);
-                        break;
-                    case "f":
-                        mutEx_run.node_failure(action_node);
-                        break;
+                if (next_cmd.length()>0) {
+                    action = next_cmd.substring(0, 1);
+
+                    if (!action.equals("e"))
+                        action_node = Integer.parseInt(next_cmd.substring(1, next_cmd.length()));
                 }
+                else
+                    valid_in = false;
 
+                if ((!(action.equals("c")) && !(action.equals("f")) && !(action.equals("e"))) || (action_node < 0 || action_node >= mutEx_run.getnActors() ))
+                    valid_in = false;
+
+                if (!valid_in)
+                    System.out.println(">>> Not valid action code <<<");
+                else {
+                    switch (action){
+                        case "e":
+                            exit = true;
+                            break;
+                        case "c":
+                            mutEx_run.request_cs(action_node);
+                            break;
+                        case "f":
+                            mutEx_run.node_failure(action_node);
+                            break;
+                    }
+
+                }
             }
 
         }
