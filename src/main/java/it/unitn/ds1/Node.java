@@ -12,16 +12,11 @@ import akka.actor.Props;
 import java.util.concurrent.TimeUnit;
 import java.io.FileWriter;
 
-import akka.actor.dsl.Creators;
-import scala.compat.java8.converterImpl.StepsIntRange;
 import scala.concurrent.duration.FiniteDuration;
 
 class Node extends AbstractActor {
     private final int id;    // ID of the current actor
     private List<ActorInfo> neighbours; // neighbourhood of this node (list of pairs of (actoref, int)
-    private final boolean be_greedy; // should the node be greedy in adding to the queue (add itselfs on top, always)
-
-
 
     private ActorInfo holder; // who is the holder for this node
     private boolean using; // is the node in the CS?
@@ -39,10 +34,9 @@ class Node extends AbstractActor {
 
 
     /* -- Actor constructor --------------------------------------------------- */
-    public Node(final int id, final boolean be_greedy) {
+    public Node(final int id) {
         this.id = id;
         this.neighbours = null;
-        this.be_greedy = be_greedy;
         this.holder = null;
         this.using = false;
         this.asked = false;
@@ -52,13 +46,13 @@ class Node extends AbstractActor {
         this.total_advise_msgs_received = 0;
         this.history = new StringBuffer();
 
-        String to_log = String.format("Node %02d created, greedy: %b\n", this.id, this.be_greedy);
+        String to_log = String.format("Node %02d created\n", this.id);
         history.append(to_log);
         System.out.print(to_log);
     }
 
-    static public Props props(final int id, final boolean be_greedy) {
-        return Props.create(Node.class, () -> new Node(id, be_greedy));
+    static public Props props(final int id) {
+        return Props.create(Node.class, () -> new Node(id));
     }
 
     // Here we define the mapping between the received message types
@@ -232,6 +226,7 @@ class Node extends AbstractActor {
         }
         else{
             logReceivingMsg("Request", msg.senderId);
+
             request_queue.add(new ActorInfo(getSender(), msg.senderId));
             logQueueUpdate(msg.senderId);
             assignPrivilege();
@@ -480,6 +475,8 @@ class Node extends AbstractActor {
         history.append(to_log);
         System.out.print(to_log);
 
+
+
     }
 
     // utility classes
@@ -490,6 +487,23 @@ class Node extends AbstractActor {
         public ActorInfo(final ActorRef reference, final int id) {
             this.reference = reference;
             this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+
+            if (o == this) {
+                return true;
+            }
+
+            if (!(o instanceof ActorInfo)) {
+                return false;
+            }
+            ActorInfo ai = (ActorInfo) o;
+
+            // Compare the data members and return accordingly
+            return Integer.compare(this.id, ai.id) == 0;
+
         }
     }
 
@@ -502,3 +516,4 @@ class Node extends AbstractActor {
     }
 
 }
+
