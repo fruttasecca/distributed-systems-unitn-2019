@@ -58,9 +58,10 @@ public class DistributedMutExTest {
         try {
 
             String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
-            for (int i = 0; i < mutEx_run.getnActors(); i++) {
+            for (int i = 1; i < mutEx_run.getnActors(); i++) {
                 String received_init = String.format("Node %02d received Initialize msg from node", i);
                 if (!(history.contains(received_init))) {
+
                     allReceivedInit = false;
                 }
                 System.out.println();
