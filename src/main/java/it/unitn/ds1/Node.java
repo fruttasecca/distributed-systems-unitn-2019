@@ -32,16 +32,11 @@ class Node extends AbstractActor {
     private int total_advise_msgs_received; // amount of advise msgs received during this recovery
 
     // durations
-    private final FiniteDuration FAILURE_DURATION = new FiniteDuration(2, TimeUnit.SECONDS);
+    private final FiniteDuration FAILURE_DURATION = new FiniteDuration(5, TimeUnit.SECONDS);
     private final FiniteDuration CS_DURATION = new FiniteDuration(10, TimeUnit.SECONDS);
     // logging
     private StringBuffer history;
 
-
-    public ActorInfo getHolder()
-    {
-        return holder;
-    }
 
     /* -- Actor constructor --------------------------------------------------- */
     public Node(final int id, final boolean be_greedy) {
