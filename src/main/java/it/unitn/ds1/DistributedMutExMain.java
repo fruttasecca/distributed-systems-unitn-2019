@@ -1,15 +1,36 @@
 package it.unitn.ds1;
 
 import java.io.BufferedReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 public class DistributedMutExMain {
 
+    private static void createFile(String filename){
+        //create history out file for debugging
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(filename, false);
+            fileWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * distributed mutual exclusion run with user interactive interface
+     * @param args
+     */
     public static void main(String[] args) {
+
+        // initialization
         DistributedMutEx mutEx_run = new DistributedMutEx();
         mutEx_run.init();
+
+        // history file init/clean
+        createFile("history.txt");
 
         boolean exit = false;
         BufferedReader reader =
@@ -23,7 +44,7 @@ public class DistributedMutExMain {
         while (!exit) {
             valid_in = true;
             try {
-                System.out.println(">>> Type <action><nodeId> in order to say what you want to do <<<");
+                System.out.println(">>> Type a sequence of <action><nodeId> pairs (separated by spaces) in order to say what you want to do \n<<<");
                 System.out.println(">>> Actions: 'c', ask for CS ; 'f', fail <<<");
                 System.out.printf(">>> Node ids: 0 - %d <<<\n", mutEx_run.getnActors()-1);
                 System.out.println(">>> Or type 'e' to exit <<<\n");
@@ -34,6 +55,8 @@ public class DistributedMutExMain {
             }
 
             StringTokenizer st = new StringTokenizer(user_in);
+
+            // process all commands
             while (st.hasMoreElements()) {
 
                 String next_cmd = st.nextElement().toString();
@@ -67,7 +90,6 @@ public class DistributedMutExMain {
 
                 }
             }
-
         }
 
         mutEx_run.printAllHist("history.txt");
