@@ -16,7 +16,6 @@ public class DistributedMutExTest {
 
     /**
      * pause execution for a given period of time
-     *
      * @param secs
      */
     private void sleep(int secs) {
@@ -36,6 +35,43 @@ public class DistributedMutExTest {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    /**
+     * test0: all nodes should receive initialization message
+     */
+    @org.junit.Test
+    public void test0(){
+        DistributedMutEx mutEx_run = new DistributedMutEx();
+        mutEx_run.init();
+
+        //initialize history file
+        String outfile = "test0.txt";
+        createFile(outfile);
+
+        //        wait 2 seconds to complete init
+        sleep(2);
+
+        mutEx_run.printAllHist(outfile);
+        boolean allReceivedInit = true;
+        try {
+
+            String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
+            for (int i = 0; i < mutEx_run.getnActors(); i++) {
+                String received_init = String.format("Node %02d received Initialize msg from node", i);
+                if (!(history.contains(received_init))) {
+                    allReceivedInit = false;
+                }
+                System.out.println();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        assertTrue(allReceivedInit);
+
+        mutEx_run.terminate();
     }
 
 
@@ -63,10 +99,9 @@ public class DistributedMutExTest {
         mutEx_run.printHist(5, outfile);
         boolean enteredCS = false;
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(outfile));
-            Stream<String> out = reader.lines();
-            enteredCS = out.anyMatch(str -> str.equals("Node 05 entered CS"));
-        } catch (FileNotFoundException e) {
+            String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
+
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
