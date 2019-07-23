@@ -6,10 +6,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 
 public class DistributedMutExTest {
@@ -91,23 +89,39 @@ public class DistributedMutExTest {
         createFile(outfile);
 
 //        wait 2 seconds to complete init
+
         sleep(2);
 
-        mutEx_run.request_cs(5);
+        int[] nodes = {8};
+        for (int i : nodes) {
+            mutEx_run.request_cs(i);
+        }
 
-        sleep(5);
+        // wait for execution
+        sleep(15);
 
-        mutEx_run.printHist(5, outfile);
-        boolean enteredCS = false;
+        mutEx_run.printAllHist(outfile);
+
+        // wait for all nodes to print their histories
+        sleep(4);
+
+        boolean enteredCS = true;
+
         try {
+
             String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
 
+            for (int i : nodes) {
+                String entered = String.format("Node %02d entered CS", i);
+                if (!(history.contains(entered))) {
+                    enteredCS = false;
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        assertEquals(true, enteredCS);
-
+        assertTrue(enteredCS);
         mutEx_run.terminate();
     }
 
@@ -163,20 +177,117 @@ public class DistributedMutExTest {
     }
 
     /**
-     * test3: node crash after init phase
+     * test3: while a node is in CS it should process incoming messages, but privilege message should be sent
+     * only after it exited CS
      */
     @org.junit.Test
     public void test3() {
         DistributedMutEx mutEx_run = new DistributedMutEx();
         mutEx_run.init();
 
+        //initialize history file
+        String outfile = "test3.txt";
+        createFile(outfile);
+
         //wait for init to complete
         sleep(2);
 
-        mutEx_run.node_failure(3);
+        int[] nodes = {0, 3, 7, 8};
+        for (int i : nodes) {
+            mutEx_run.request_cs(i);
+        }
 
-        sleep(10);
+        // wait for execution
+        sleep(50);
+
+        mutEx_run.printAllHist(outfile);
+
+        // wait for all nodes to print their histories
+        sleep(4);
+
+        boolean correct = true;
+
+        try {
+
+            String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
+
+            for (int i : nodes) {
+                String exited = String.format("Node %02d exited CS", i);
+                String privilege_sent = String.format("Node %02d sent Privilege msg to", i);
+                int i1 = history.lastIndexOf(exited);
+                int i2 = history.lastIndexOf(privilege_sent);
+
+                if (i2 > 0 && i2 < i1){
+                    correct = false;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        assertTrue(correct);
         mutEx_run.terminate();
     }
+
+
+    /**
+     * test4: requests should not be duplicated
+     */
+    @org.junit.Test
+    public void test4(){
+        DistributedMutEx mutEx_run = new DistributedMutEx();
+        mutEx_run.init();
+
+        //initialize history file
+        String outfile = "test4.txt";
+        createFile(outfile);
+
+//        wait 2 seconds to complete init
+
+        sleep(2);
+
+        int[] nodes = {0, 1, 3, 4, 7, 8, 9};
+        for (int i : nodes) {
+            mutEx_run.request_cs(i);
+        }
+
+        // wait for execution
+        sleep(100);
+
+        mutEx_run.printAllHist(outfile);
+
+        // wait for all nodes to print their histories
+        sleep(4);
+
+        boolean correct = true;
+        try {
+
+            String history = new String(Files.readAllBytes(Paths.get(outfile)), StandardCharsets.UTF_8);
+
+            for (int i : nodes) {
+                String queue_content = String.format("Queue content of node %02d: ", i);
+
+                for (int index = history.indexOf(queue_content);
+                     index >= 0;
+                     index = history.indexOf(queue_content, index + 1))
+                {
+                    int queue_index = index + queue_content.length();
+                    String queue = history.substring(queue_index);
+                    queue = queue.substring(1, queue.indexOf("]"));
+                    List<String> list = new ArrayList<String>(Arrays.asList(queue.split(", ")));
+                    Set<String> set = new HashSet<String>(list);
+                    if (set.size() != list.size()){
+                        correct = false;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        assertTrue(correct);
+        mutEx_run.terminate();
+    }
+
 
 }

@@ -2,28 +2,17 @@ package it.unitn.ds1;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import akka.actor.Props;
 
-import java.io.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import it.unitn.ds1.Node;
 import it.unitn.ds1.Node.SystemInitMsg;
 import it.unitn.ds1.Node.SystemNodeNeighbourhoodMsg;
 import it.unitn.ds1.Node.SystemWantCSMsg;
 import it.unitn.ds1.Node.SystemPrintHistoryMsg;
 import it.unitn.ds1.Node.SystemFailMsg;
 
-/* TODO
-assunto che no nodo crasha durante init?
-assertions
-aggiunere id di sender a messaggi node to node
-in init, failure e recovery settare bene tutti i campi, nn fatto per init e failure
- */
 
 public class DistributedMutEx {
     public static int getnActors() {
@@ -31,7 +20,6 @@ public class DistributedMutEx {
     }
 
     final private static int N_ACTORS = 10; // number of actors
-    static final private boolean BE_GREEDY = false;
 
     final private ActorSystem system = ActorSystem.create("distributed_mutual_exclusion");
     List<ActorRef> nodes = new ArrayList<>();
@@ -42,7 +30,7 @@ public class DistributedMutEx {
     public void init() {
 
         for (int i = 0; i < N_ACTORS; i++) {
-            this.nodes.add(system.actorOf(Node.props(i, BE_GREEDY), "Node_" + i));
+            this.nodes.add(system.actorOf(Node.props(i), "Node_" + i));
 
         }
         this.nodes = Collections.unmodifiableList(this.nodes);
