@@ -21,9 +21,6 @@ import it.unitn.ds1.Node.SystemFailMsg;
 /* TODO
 assunto che no nodo crasha durante init?
 assertions
-metodo per fare un albero in maniera pulita (dottorando del tizio diceva a compile time, da qualche file di confi? di
-akka?)
-mettere if fail/recovery then etc, attualmente sti check nn ci sono --> fatto
 aggiunere id di sender a messaggi node to node
 in init, failure e recovery settare bene tutti i campi, nn fatto per init e failure
  */
